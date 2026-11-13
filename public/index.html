@@ -13,12 +13,14 @@
   <section class="card">
     <h2>검색 조건</h2>
     <div class="grid">
-      <label>몇 년부터 <input id="fromYear" type="number" min="2000" step="1"><small>기본값: 올해 기준 최근 3년</small></label>
-      <label>데이터셋 명칭 <input id="dsName"></label>
-      <label>데이터셋 URL <input id="dsUrl"></label>
-      <label>검색 키워드 (쉼표 구분) <input id="dsKeywords"></label>
-      <label>기준 논문 arXiv ID <input id="dsRef"><small>이 논문을 인용한 논문을 후보로 수집</small></label>
+      <label><span class="req">필수</span> 몇 년부터 <input id="fromYear" class="required" type="number" min="2000" step="1" required><small>기본값: 올해 기준 최근 3년</small></label>
+      <label><span class="req">필수</span> 데이터셋 명칭 <input id="dsName" class="required" required></label>
+      <label><span class="req">필수</span> 데이터셋 URL <input id="dsUrl" class="required" required></label>
     </div>
+    <details class="opt"><summary>고급 옵션 (선택 · 비워두면 자동)</summary><div class="grid">
+      <label>검색 키워드 (쉼표 구분) <input id="dsKeywords" placeholder="비워두면 데이터셋 명칭에서 자동 생성"></label>
+      <label>기준 논문 arXiv ID <input id="dsRef" placeholder="비워두면 URL/제목으로 자동 탐색"><small>이 논문을 인용한 논문을 후보로 수집</small></label>
+    </div></details>
     <h3>Major Company <span id="compCount"></span></h3>
     <div class="row"><button id="selAll" class="ghost">전체 선택</button><button id="selNone" class="ghost">전체 해제</button></div>
     <div id="companies" class="chips"></div>

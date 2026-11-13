@@ -54,8 +54,9 @@ async function api(req, res, url) {
     const all = await loadCompanies();
     const selected = Array.isArray(b.companies) ? all.filter((c) => b.companies.includes(c.name)) : all;
     if (!selected.length) return send(res, 400, { error: '검색할 회사를 1개 이상 선택하세요.' });
-    const ds = { ...DEFAULT_DATASET, ...(b.dataset || {}) };
-    if (b.dataset?.keywords && !Array.isArray(b.dataset.keywords)) ds.keywords = String(b.dataset.keywords).split(',').map((s) => s.trim()).filter(Boolean);
+    const d = b.dataset || {};
+    const ds = { name: String(d.name || '').trim(), url: String(d.url || '').trim(), refArxiv: String(d.refArxiv || '').trim(), keywords: d.keywords || '' };
+    if (!ds.name || !ds.url) return send(res, 400, { error: '데이터셋 명칭과 URL 은 필수 입력입니다.' });
     const id = randomUUID();
     const job = { status: 'running', logs: [], percent: 0, result: null, error: null };
     jobs.set(id, job);

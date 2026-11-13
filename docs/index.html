@@ -7,12 +7,14 @@
 <main>
 <section class="card"><h2>검색 조건</h2>
 <div class="grid">
-<label>몇 년부터 <input id="fromYear" type="number" min="2000" step="1"><small>기본값: 올해 기준 최근 3년</small></label>
-<label>데이터셋 명칭 <input id="dsName" value="MTEB (Massive Text Embedding Benchmark)"></label>
-<label>데이터셋 URL <input id="dsUrl" value="https://github.com/embeddings-benchmark/mteb"></label>
-<label>기준 논문 arXiv ID <input id="dsRef" value="2210.07316"><small>이 논문을 인용한 논문을 조회</small></label>
-<label>OpenAlex API 키 (선택) <input id="apiKey" type="password" autocomplete="off"><small>무료 한도 초과 시 입력. 이 브라우저에만 저장됩니다.</small></label>
+<label><span class="req">필수</span> 몇 년부터 <input id="fromYear" class="required" type="number" min="2000" step="1" required><small>기본값: 올해 기준 최근 3년</small></label>
+<label><span class="req">필수</span> 데이터셋 명칭 <input id="dsName" class="required" required value="MTEB (Massive Text Embedding Benchmark)"></label>
+<label><span class="req">필수</span> 데이터셋 URL <input id="dsUrl" class="required" required value="https://github.com/embeddings-benchmark/mteb"></label>
 </div>
+<details class="opt"><summary>고급 옵션 (선택 · 비워두면 자동)</summary><div class="grid">
+<label>기준 논문 arXiv ID <input id="dsRef" placeholder="비워두면 URL/제목으로 자동 탐색"><small>이 논문을 인용한 논문을 조회</small></label>
+<label>OpenAlex API 키 (선택) <input id="apiKey" type="password" autocomplete="off"><small>무료 한도 초과 시 입력. 이 브라우저에만 저장됩니다.</small></label>
+</div></details>
 <h3>Major Company <span id="compCount"></span></h3>
 <div class="row"><button id="selAll" class="ghost">전체 선택</button><button id="selNone" class="ghost">전체 해제</button>
 <button id="exp" class="ghost">JSON 내보내기</button><button id="imp" class="ghost">JSON 가져오기</button><button id="reset" class="ghost">기본값 복원</button>

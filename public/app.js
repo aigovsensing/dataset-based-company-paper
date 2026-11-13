@@ -16,7 +16,6 @@ async function init() {
   // 기본값: 올해 - 3년 (브라우저 시계 기준으로 자동 계산)
   $('fromYear').value = new Date().getFullYear() - 3;
   $('dsName').value = dataset.name; $('dsUrl').value = dataset.url;
-  $('dsKeywords').value = dataset.keywords.join(', '); $('dsRef').value = dataset.refArxiv;
   companies = await api('/api/companies');
   selected = new Set(companies.map((c) => c.name));
   renderCompanies();
@@ -66,13 +65,14 @@ $('selAll').onclick = () => { selected = new Set(companies.map((c) => c.name)); 
 $('selNone').onclick = () => { selected.clear(); renderCompanies(); };
 
 $('go').onclick = async () => {
+  const missing = ['fromYear', 'dsName', 'dsUrl'].find((id) => !$(id).value.trim());
+  if (missing) { $(missing).focus(); $('status').textContent = '필수 항목(몇 년부터, 데이터셋 명칭, 데이터셋 URL)을 입력하세요.'; return; }
   $('go').disabled = true; $('resultCard').hidden = true;
   $('bar').hidden = false; $('log').hidden = false; $('log').textContent = ''; $('status').textContent = '검색 중…';
   try {
     const { jobId } = await api('/api/search', { method: 'POST', body: {
       fromYear: Number($('fromYear').value), companies: [...selected],
-      dataset: { name: $('dsName').value.trim(), url: $('dsUrl').value.trim(), refArxiv: $('dsRef').value.trim(),
-        refDoi: `10.48550/arXiv.${$('dsRef').value.trim()}`, keywords: $('dsKeywords').value.split(',').map((s) => s.trim()).filter(Boolean) },
+      dataset: { name: $('dsName').value.trim(), url: $('dsUrl').value.trim(), refArxiv: $('dsRef').value.trim(), keywords: $('dsKeywords').value.trim() },
     } });
     for (;;) {
       await new Promise((r) => setTimeout(r, 1200));
@@ -98,7 +98,7 @@ const venueLabel = (r) => `${r.venueInfo.abbr} (${r.year})`;
 
 function showResults(res) {
   results = res.results; page = 1;
-  $('meta').textContent = `데이터 출처: ${res.source} · 조회 대상 ${res.scanned}건${res.skipped ? ` (소속 확인 불가 ${res.skipped}건 제외)` : ''} · ${res.fromYear}년 이후 · 최신순`;
+  $('meta').textContent = `데이터 출처: ${res.source} · 조회 대상 ${res.scanned}건${res.skipped ? ` (소속 확인 불가 ${res.skipped}건 제외)` : ''} · ${res.fromYear}년 이후 · 최신순` + (res.reference ? ` · 기준 논문: ${res.reference.title}${res.reference.arxiv ? ` (arXiv:${res.reference.arxiv})` : ''} · 키워드: ${res.keywords.join(', ')}` : '');
   renderRows(); $('resultCard').hidden = false;
 }
 function renderRows() {

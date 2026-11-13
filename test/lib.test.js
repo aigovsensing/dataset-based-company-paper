@@ -31,5 +31,10 @@ test('dedupe 는 출판본 우선', () => {
 });
 import { authorBlock } from '../lib/evidence.js';
 test('저자 블록은 초록 이전까지만', () => {
-  assert.equal(authorBlock('Title\nJane Doe, Google\nAbstract\nWe compare with OpenAI embeddings'), 'Title\nJane Doe, Google\n');
+  assert.equal(authorBlock('Title\nJane Doe, Google\nAbstract\nWe compare with OpenAI embeddings'), 'Title\nJane Doe, Google');
+});
+import { deriveKeywords } from '../lib/reference.js';
+test('키워드 자동 생성', () => {
+  const k = deriveKeywords('MTEB (Massive Text Embedding Benchmark)');
+  assert.ok(k.includes('MTEB') && k.includes('Massive Text Embedding Benchmark'));
 });

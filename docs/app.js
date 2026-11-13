@@ -46,16 +46,18 @@ const venueLabel = (r) => `${r.venueInfo.abbr} (${r.year})`;
 const claim = (r) => `* 컨퍼런스/저널 (발표/출판년도): ${venueLabel(r)}\n   * 참고: arXiv는 공식적인 학술대회가 아닙니다. 학술대회 또는 저널의 논문을 제출해 주십시오.\n* 논문명: ${r.title} (${r.year})\n* 출판기업: ${r.companies.join(', ')}\n* 다운로드 링크: ${r.url}\n* 데이터셋: ${r.dataset}\n* 활용 명시: (논문 본문에서 ${r.dataset} 활용 문구 확인 후 기재)`;
 
 $('go').onclick = async () => {
+  const missing = ['fromYear', 'dsName', 'dsUrl'].find((id) => !$(id).value.trim());
+  if (missing) { $(missing).focus(); $('status').textContent = '필수 항목(몇 년부터, 데이터셋 명칭, 데이터셋 URL)을 입력하세요.'; return; }
   const ref = $('dsRef').value.trim(); const key = $('apiKey').value.trim(); store.set('apiKey', key);
   $('go').disabled = true; $('resultCard').hidden = true; $('bar').hidden = false; $('log').hidden = false; $('log').textContent = ''; $('status').textContent = '검색 중…';
   const log = (m) => { $('log').textContent += m + '\n'; $('log').scrollTop = 1e9; };
   try {
     if (!selected.size) throw new Error('회사를 1개 이상 선택하세요.');
-    const dataset = { name: $('dsName').value.trim(), url: $('dsUrl').value.trim(), refDoi: `10.48550/arXiv.${ref}`, refTitle: 'MTEB: Massive Text Embedding Benchmark' };
+    const dataset = { name: $('dsName').value.trim(), url: $('dsUrl').value.trim(), refArxiv: ref };
     const r = await search({ fromYear: Number($('fromYear').value), companies: companies.filter((c) => selected.has(c.name)), dataset, apiKey: key, log, progress: (p) => ($('bar').firstElementChild.style.width = `${Math.round(p * 100)}%`) });
     page = 1;
     results = dedupe(r.results.map((x) => ({ ...x, venueInfo: classifyVenue(x.venue) })));
-    $('meta').textContent = `데이터 출처: OpenAlex · 조회 대상 ${r.scanned}건 · ${$('fromYear').value}년 이후 · 최신순`;
+    $('meta').textContent = `데이터 출처: OpenAlex · 조회 대상 ${r.scanned}건 · ${$('fromYear').value}년 이후 · 최신순 · 기준 논문: ${r.reference.title}${r.reference.arxiv ? ` (arXiv:${r.reference.arxiv})` : ''} · 키워드: ${r.keywords.join(', ')}`;
     rows(); $('resultCard').hidden = false; $('status').textContent = '완료';
   } catch (err) { $('status').textContent = '오류: ' + err.message; }
   $('go').disabled = false;

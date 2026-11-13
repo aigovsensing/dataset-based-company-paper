@@ -34,6 +34,42 @@ async function getJson(url, tries = 3) {
   throw new Error('OpenAlex 요청 실패');
 }
 
+
+// ---- 기준 논문 / 키워드 자동 결정 (필수 입력: 데이터셋 명칭, URL 만으로 동작) ----
+const KNOWN = [{ match: /embeddings-benchmark\/mteb/i, refArxiv: '2210.07316' }];
+export function deriveKeywords(name = '') {
+  const parts = name.split(/[()]/).map((x) => x.trim()).filter((x) => x.length >= 3);
+  const acr = (name.match(/\b[A-Z][A-Za-z0-9-]*[A-Z0-9][A-Za-z0-9-]*\b/g) || []).filter((w) => w.length >= 3 && /[A-Z].*[A-Z]|\d/.test(w));
+  return [...new Set([...parts, ...acr, name.trim()].filter(Boolean))];
+}
+async function readmeArxiv(url) {
+  const m = String(url).match(/github\.com\/([^/\s]+)\/([^/\s#?]+)/i);
+  if (!m) return null;
+  for (const f of ['README.md', 'readme.md']) {
+    try {
+      const r = await fetch(`https://raw.githubusercontent.com/${m[1]}/${m[2].replace(/\.git$/, '')}/HEAD/${f}`);
+      if (!r.ok) continue;
+      const c = new Map();
+      for (const x of (await r.text()).matchAll(/arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d{4,5})/gi)) c.set(x[1], (c.get(x[1]) || 0) + 1);
+      const best = [...c.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (best) return best[0];
+    } catch { /* 다음 후보 */ }
+  }
+  return null;
+}
+export async function resolveReference(input, q, log) {
+  const name = input.name.trim();
+  const keywords = deriveKeywords(name);
+  let refArxiv = (input.refArxiv || '').trim() || arxivIdFrom(input.url) || KNOWN.find((k) => k.match.test(input.url))?.refArxiv || (await readmeArxiv(input.url));
+  if (refArxiv) { log(`기준 논문 arXiv:${refArxiv}`); return { name, keywords, refDoi: `10.48550/arXiv.${refArxiv}`, refArxiv, refTitle: name }; }
+  for (const query of new Set([name, ...name.split(/[()]/).map((x) => x.trim()).filter((x) => x.length >= 4)])) {
+    const r = await getJson(q('/works', { search: query, 'per-page': 5, select: 'id,title,doi,cited_by_count' }));
+    const hit = (r.results || []).filter((w) => w.title && keywords.some((k) => w.title.toLowerCase().includes(k.toLowerCase()))).sort((a, b) => b.cited_by_count - a.cited_by_count)[0];
+    if (hit) { log(`기준 논문 자동 탐색(제목 검색): ${hit.title}`); return { name, keywords, refOaId: hit.id.split('/').pop(), refTitle: hit.title, refArxiv: arxivIdFrom(hit.doi || '') }; }
+  }
+  throw new Error('기준 논문을 자동으로 찾지 못했습니다. 고급 옵션의 "기준 논문 arXiv ID"를 입력해 주세요.');
+}
+
 export async function search({ fromYear, companies, dataset, apiKey, log, progress }) {
   const q = (path, p) => {
     const u = new URL('https://api.openalex.org' + path);
@@ -41,12 +77,16 @@ export async function search({ fromYear, companies, dataset, apiKey, log, progre
     if (apiKey) u.searchParams.set('api_key', apiKey);
     return u.toString();
   };
+  const ds = await resolveReference(dataset, q, log);
   let ref;
-  try { ref = await getJson(q(`/works/doi:${dataset.refDoi}`, { select: 'id,title' })); }
-  catch (e) { if (/한도/.test(e.message)) throw e; ref = (await getJson(q('/works', { search: dataset.refTitle, 'per-page': 1, select: 'id,title' }))).results?.[0]; }
-  if (!ref?.id) throw new Error('기준 논문을 OpenAlex 에서 찾지 못했습니다.');
+  if (ds.refOaId) ref = { id: ds.refOaId, title: ds.refTitle };
+  else {
+    try { ref = await getJson(q(`/works/doi:${ds.refDoi}`, { select: 'id,title' })); }
+    catch (e) { if (/한도/.test(e.message)) throw e; ref = (await getJson(q('/works', { search: ds.refTitle, 'per-page': 1, select: 'id,title' }))).results?.[0]; }
+  }
   const refId = ref.id.split('/').pop();
   log(`기준 논문: ${ref.title}`);
+  dataset = ds;
 
   const matchers = buildMatchers(companies);
   const found = [];
@@ -79,7 +119,7 @@ export async function search({ fromYear, companies, dataset, apiKey, log, progre
     progress(total ? scanned / total : 1);
     if (!r.results?.length || scanned >= total) break;
   }
-  return { scanned, results: found };
+  return { scanned, results: found, reference: { title: ref.title, arxiv: ds.refArxiv }, keywords: ds.keywords };
 }
 
 export function dedupe(items) {
