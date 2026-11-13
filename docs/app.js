@@ -2,6 +2,7 @@ import { normalize, search, dedupe, classifyVenue } from './lib.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+let page = 1, query = '';
 let companies = [], selected = new Set(), editing = null, results = [];
 
 async function defaults() { return normalize(await (await fetch('data/major-company-list.json')).json()); }
@@ -52,6 +53,7 @@ $('go').onclick = async () => {
     if (!selected.size) throw new Error('회사를 1개 이상 선택하세요.');
     const dataset = { name: $('dsName').value.trim(), url: $('dsUrl').value.trim(), refDoi: `10.48550/arXiv.${ref}`, refTitle: 'MTEB: Massive Text Embedding Benchmark' };
     const r = await search({ fromYear: Number($('fromYear').value), companies: companies.filter((c) => selected.has(c.name)), dataset, apiKey: key, log, progress: (p) => ($('bar').firstElementChild.style.width = `${Math.round(p * 100)}%`) });
+    page = 1;
     results = dedupe(r.results.map((x) => ({ ...x, venueInfo: classifyVenue(x.venue) })));
     $('meta').textContent = `데이터 출처: OpenAlex · 조회 대상 ${r.scanned}건 · ${$('fromYear').value}년 이후 · 최신순`;
     rows(); $('resultCard').hidden = false; $('status').textContent = '완료';
@@ -59,13 +61,38 @@ $('go').onclick = async () => {
   $('go').disabled = false;
 };
 function rows() {
-  const list = results.filter((r) => !$('onlyOfficial').checked || r.venueInfo.official);
-  $('resCount').textContent = `(${list.length}건)`;
-  $('rows').innerHTML = list.map((r) => `<tr><td>${esc(venueLabel(r))}${r.venueInfo.official ? (r.venueInfo.abbr !== r.venueInfo.name ? `<br><small>${esc(r.venueInfo.name)}</small>` : '') : '<br><span class="badge">arXiv: 공식 학술대회 아님</span>'}</td>
+  const all = filtered(), size = Number($('pageSize').value) || 20;
+  const pages = Math.max(1, Math.ceil(all.length / size)); page = Math.min(page, pages);
+  const start = (page - 1) * size, list = all.slice(start, start + size);
+  $('resCount').textContent = query || $('onlyOfficial').checked ? `(${all.length}건 / 전체 ${results.length}건)` : `(${all.length}건)`;
+  renderPager(pages);
+  $('rows').innerHTML = list.map((r, i) => `<tr><td class="no">${all.length - start - i}</td><td>${esc(venueLabel(r))}${r.venueInfo.official ? (r.venueInfo.abbr !== r.venueInfo.name ? `<br><small>${esc(r.venueInfo.name)}</small>` : '') : '<br><span class="badge">arXiv: 공식 학술대회 아님</span>'}</td>
   <td>${esc(r.title)} (${esc(r.year)})</td><td>${esc(r.companies.join(', '))}</td>
   <td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a>${r.publishedUrl !== r.url ? `<br><a href="${esc(r.publishedUrl)}" target="_blank" rel="noopener">출판본</a>` : ''}</td>
-  <td>${esc(r.dataset)}</td><td><span class="badge">본문에서 활용 문구 직접 확인 필요</span></td><td><button data-copy="${results.indexOf(r)}">소명자료 복사</button></td></tr>`).join('') || '<tr><td colspan="7">조건에 맞는 논문이 없습니다.</td></tr>';
+  <td>${esc(r.dataset)}</td><td><span class="badge">본문에서 활용 문구 직접 확인 필요</span></td><td><button data-copy="${results.indexOf(r)}">소명자료 복사</button></td></tr>`).join('') || '<tr><td colspan="8">조건에 맞는 논문이 없습니다.</td></tr>';
 }
+
+function filtered() {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  return results.filter((r) => {
+    if ($('onlyOfficial').checked && !r.venueInfo.official) return false;
+    if (!terms.length) return true;
+    const hay = [r.title, r.year, r.companies.join(' '), r.venueInfo.abbr, r.venueInfo.name, r.url, r.dataset, ...(r.evidence?.snippets || [])].join(' ').toLowerCase();
+    return terms.every((t) => hay.includes(t));
+  });
+}
+function renderPager(pages) {
+  const btn = (label, p, { cur, dis } = {}) => `<button data-page="${p}" ${cur ? 'class="cur"' : ''} ${dis ? 'disabled' : ''}>${label}</button>`;
+  const from = Math.max(1, Math.min(page - 2, pages - 4)), to = Math.min(pages, from + 4);
+  let h = btn('«', 1, { dis: page === 1 }) + btn('‹', page - 1, { dis: page === 1 });
+  for (let p = from; p <= to; p++) h += btn(p, p, { cur: p === page });
+  h += btn('›', page + 1, { dis: page === pages }) + btn('»', pages, { dis: page === pages });
+  $('pager').innerHTML = pages > 1 ? h + `<span class="sub">&nbsp;${page} / ${pages} 페이지</span>` : '';
+}
+$('pager').addEventListener('click', (e) => { const p = Number(e.target.dataset.page); if (p) { page = p; rows(); $('rows').closest('.scroll').scrollIntoView({ block: 'start' }); } });
+$('pageSize').onchange = () => { page = 1; rows(); };
+let qTimer; $('q').oninput = (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => { query = e.target.value.trim(); page = 1; rows(); }, 200); };
+$('qClear').onclick = () => { $('q').value = ''; query = ''; page = 1; rows(); };
 $('onlyOfficial').onchange = rows;
 $('rows').addEventListener('click', async (e) => { const i = e.target.dataset.copy; if (i == null) return; await navigator.clipboard.writeText(claim(results[i])); e.target.textContent = '복사됨 ✓'; setTimeout(() => (e.target.textContent = '소명자료 복사'), 1500); });
 $('csv').onclick = () => {

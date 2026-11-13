@@ -7,6 +7,7 @@ const api = async (url, opt) => {
   return j;
 };
 
+let page = 1, query = '';
 let companies = [], selected = new Set(), editing = null, results = [], dataset = {};
 
 async function init() {
@@ -96,25 +97,50 @@ const claimText = (r) => `* 컨퍼런스/저널 (발표/출판년도): ${venueLa
 const venueLabel = (r) => `${r.venueInfo.abbr} (${r.year})`;
 
 function showResults(res) {
-  results = res.results;
+  results = res.results; page = 1;
   $('meta').textContent = `데이터 출처: ${res.source} · 조회 대상 ${res.scanned}건${res.skipped ? ` (소속 확인 불가 ${res.skipped}건 제외)` : ''} · ${res.fromYear}년 이후 · 최신순`;
   renderRows(); $('resultCard').hidden = false;
 }
 function renderRows() {
-  const list = results.filter((r) => !$('onlyOfficial').checked || r.venueInfo.official);
-  $('resCount').textContent = `(${list.length}건)`;
+  const all = filtered(), size = Number($('pageSize').value) || 20;
+  const pages = Math.max(1, Math.ceil(all.length / size)); page = Math.min(page, pages);
+  const start = (page - 1) * size, list = all.slice(start, start + size);
+  $('resCount').textContent = query || $('onlyOfficial').checked ? `(${all.length}건 / 전체 ${results.length}건)` : `(${all.length}건)`;
+  renderPager(pages);
   $('rows').innerHTML = list.map((r, i) => {
     const ev = r.evidence;
     const use = ev?.snippets?.length
       ? `${esc(r.companies.join(', '))} 논문 본문에서 데이터셋 언급 ${ev.mentions}회 확인.<blockquote>“${esc(ev.snippets.join(' … '))}”</blockquote>`
       : '<span class="badge">원문 자동 확인 불가 — 논문 본문 직접 확인 필요</span>';
-    return `<tr><td>${esc(venueLabel(r))}${r.venueInfo.official ? '' : '<br><span class="badge">arXiv: 공식 학술대회 아님</span>'}
+    return `<tr><td class="no">${all.length - start - i}</td><td>${esc(venueLabel(r))}${r.venueInfo.official ? '' : '<br><span class="badge">arXiv: 공식 학술대회 아님</span>'}
       ${r.venueInfo.official && r.venueInfo.abbr !== r.venueInfo.name ? `<br><small>${esc(r.venueInfo.name)}</small>` : ''}</td>
       <td>${esc(r.title)} (${esc(r.year)})</td><td>${esc(r.companies.join(', '))}</td>
       <td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a>${r.publishedUrl && r.publishedUrl !== r.url ? `<br><a href="${esc(r.publishedUrl)}" target="_blank" rel="noopener">출판본</a>` : ''}</td>
       <td>${esc(r.dataset)}</td><td>${use}</td><td><button data-copy="${results.indexOf(r)}">소명자료 복사</button></td></tr>`;
-  }).join('') || '<tr><td colspan="7">조건에 맞는 논문이 없습니다.</td></tr>';
+  }).join('') || '<tr><td colspan="8">조건에 맞는 논문이 없습니다.</td></tr>';
 }
+
+function filtered() {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  return results.filter((r) => {
+    if ($('onlyOfficial').checked && !r.venueInfo.official) return false;
+    if (!terms.length) return true;
+    const hay = [r.title, r.year, r.companies.join(' '), r.venueInfo.abbr, r.venueInfo.name, r.url, r.dataset, ...(r.evidence?.snippets || [])].join(' ').toLowerCase();
+    return terms.every((t) => hay.includes(t));
+  });
+}
+function renderPager(pages) {
+  const btn = (label, p, { cur, dis } = {}) => `<button data-page="${p}" ${cur ? 'class="cur"' : ''} ${dis ? 'disabled' : ''}>${label}</button>`;
+  const from = Math.max(1, Math.min(page - 2, pages - 4)), to = Math.min(pages, from + 4);
+  let h = btn('«', 1, { dis: page === 1 }) + btn('‹', page - 1, { dis: page === 1 });
+  for (let p = from; p <= to; p++) h += btn(p, p, { cur: p === page });
+  h += btn('›', page + 1, { dis: page === pages }) + btn('»', pages, { dis: page === pages });
+  $('pager').innerHTML = pages > 1 ? h + `<span class="sub">&nbsp;${page} / ${pages} 페이지</span>` : '';
+}
+$('pager').addEventListener('click', (e) => { const p = Number(e.target.dataset.page); if (p) { page = p; renderRows(); $('rows').closest('.scroll').scrollIntoView({ block: 'start' }); } });
+$('pageSize').onchange = () => { page = 1; renderRows(); };
+let qTimer; $('q').oninput = (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => { query = e.target.value.trim(); page = 1; renderRows(); }, 200); };
+$('qClear').onclick = () => { $('q').value = ''; query = ''; page = 1; renderRows(); };
 $('onlyOfficial').onchange = renderRows;
 $('rows').addEventListener('click', async (e) => {
   const i = e.target.dataset.copy; if (i == null) return;
