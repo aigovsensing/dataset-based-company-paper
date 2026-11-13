@@ -1,0 +1,12 @@
+{
+  "name": "dataset-based-company-paper",
+  "version": "1.0.0",
+  "description": "데이터셋(예: MTEB)을 활용한 Major Company 논문 현황 조회 웹앱",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=20" },
+  "license": "MIT"
+}
