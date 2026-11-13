@@ -24,3 +24,9 @@ npm test
 - 환경변수: `OPENALEX_API_KEY`, `OPENALEX_MAILTO`, `S2_API_KEY`(선택)
 
 > 자동 판별은 보조 수단입니다. 소명자료 제출 전 논문 원문에서 소속·데이터셋 활용 문구를 직접 확인하세요.
+
+## 정적 웹앱 (`docs/`)
+서버 없이 브라우저에서 OpenAlex 를 직접 호출하는 버전입니다. GitHub Pages(Settings → Pages → `main` / `/docs`)로 바로 배포할 수 있습니다.
+- 회사 목록은 브라우저 localStorage 저장 + JSON 가져오기/내보내기 (기본값: `docs/data/major-company-list.json`)
+- 브라우저 CORS 제약으로 논문 본문 근거 문장 자동 추출은 미지원 (서버 버전에서만 지원)
+- OpenAlex 무료 한도 초과 시 화면에서 API 키 입력

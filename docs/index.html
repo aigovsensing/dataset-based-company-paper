@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>데이터셋 기반 Major Company 논문 조회</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><h1>데이터셋 기반 Major Company 논문 현황</h1>
+<p class="sub">서버 없이 브라우저에서 OpenAlex 를 직접 조회합니다 (GitHub Pages 용 정적 웹앱).</p></header>
+<main>
+<section class="card"><h2>검색 조건</h2>
+<div class="grid">
+<label>몇 년부터 <input id="fromYear" type="number" min="2000" step="1"><small>기본값: 올해 기준 최근 3년</small></label>
+<label>데이터셋 명칭 <input id="dsName" value="MTEB (Massive Text Embedding Benchmark)"></label>
+<label>데이터셋 URL <input id="dsUrl" value="https://github.com/embeddings-benchmark/mteb"></label>
+<label>기준 논문 arXiv ID <input id="dsRef" value="2210.07316"><small>이 논문을 인용한 논문을 조회</small></label>
+<label>OpenAlex API 키 (선택) <input id="apiKey" type="password" autocomplete="off"><small>무료 한도 초과 시 입력. 이 브라우저에만 저장됩니다.</small></label>
+</div>
+<h3>Major Company <span id="compCount"></span></h3>
+<div class="row"><button id="selAll" class="ghost">전체 선택</button><button id="selNone" class="ghost">전체 해제</button>
+<button id="exp" class="ghost">JSON 내보내기</button><button id="imp" class="ghost">JSON 가져오기</button><button id="reset" class="ghost">기본값 복원</button>
+<input id="impFile" type="file" accept="application/json" hidden></div>
+<div id="companies" class="chips"></div>
+<form id="compForm" class="row"><input id="cName" placeholder="회사명" required><input id="cAliases" placeholder="별칭(쉼표 구분)" size="40">
+<button type="submit" id="cSave">추가</button><button type="button" id="cCancel" class="ghost" hidden>취소</button></form>
+<small>회사 목록은 이 브라우저(localStorage)에 저장됩니다. 기본값은 <code>docs/data/major-company-list.json</code> 이며, 내보내기한 JSON 으로 교체할 수 있습니다.</small>
+<div class="row"><button id="go" class="primary">검색 실행</button><span id="status"></span></div>
+<div id="bar" hidden><div></div></div><pre id="log" hidden></pre></section>
+<section class="card" id="resultCard" hidden>
+<div class="row between"><h2>검색 결과 <span id="resCount"></span></h2><div class="row">
+<label class="inline"><input type="checkbox" id="onlyOfficial"> 학회/저널만 (arXiv 제외)</label><button id="csv" class="ghost">CSV 저장</button></div></div>
+<p id="meta" class="sub"></p>
+<div class="scroll"><table><thead><tr><th>컨퍼런스/저널 (년도)</th><th>논문명 (년도)</th><th>출판기업</th><th>다운로드 링크</th><th>데이터셋</th><th>활용 명시</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<section class="card notice"><h2>예외 활용 조건 안내</h2><ul>
+<li><b>Major Company 논문 레퍼런스</b>: 최근 3년 이내 Major Company 가 동일 데이터를 활용해 출판한 논문이 있으면 '논문 제출 목적'에 한해 예외 활용 가능</li>
+<li><b>명확한 활용 명시</b>: 논문에 해당 데이터셋이 Train/Test 등으로 활용되었음이 명시되어야 함 — 이 정적 버전은 본문을 자동 추출하지 못하므로(브라우저 CORS 제약) 링크에서 직접 확인하세요. 본문 근거 자동 추출은 <code>npm start</code> 서버 버전에서 지원합니다.</li>
+<li>arXiv 는 공식 학술대회가 아닙니다. 학술대회 또는 저널에 게재된 논문을 제출하세요.</li></ul></section>
+</main><script type="module" src="app.js"></script></body></html>
