@@ -7,55 +7,56 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header><h1>데이터셋 기반 Major Company 논문 현황</h1>
-<p class="sub">입력한 데이터셋을 활용해 학회·저널에 발표된 Major Company 논문을 최신순으로 조회합니다.</p></header>
+<header><div class="langsw" role="group" aria-label="Language"><button type="button" data-lang="ko">한국어</button><button type="button" data-lang="en">English</button></div><h1 data-i18n="h1"></h1>
+<p class="sub" data-i18n="subtitle"></p></header>
 <main>
   <section class="card">
-    <h2>검색 조건</h2>
+    <h2 data-i18n="searchCond"></h2>
     <div class="grid">
-      <label><span class="req">필수</span> 몇 년부터 <input id="fromYear" class="required" type="number" min="2000" step="1" required><small>기본값: 올해 기준 최근 3년</small></label>
-      <label><span class="req">필수</span> 데이터셋 명칭 <input id="dsName" class="required" required></label>
-      <label><span class="req">필수</span> 데이터셋 URL <input id="dsUrl" class="required" required></label>
+      <label><span class="req" data-i18n="req"></span> <span data-i18n="fromYear"></span> <input id="fromYear" class="required" type="number" min="2000" step="1" required><small data-i18n="fromYearHint"></small></label>
+      <label><span class="req" data-i18n="req"></span> <span data-i18n="dsName"></span> <input id="dsName" class="required" required></label>
+      <label><span class="req" data-i18n="req"></span> <span data-i18n="dsUrl"></span> <input id="dsUrl" class="required" required></label>
     </div>
-    <details class="opt"><summary>고급 옵션 (선택 · 비워두면 자동)</summary><div class="grid">
-      <label>검색 키워드 (쉼표 구분) <input id="dsKeywords" placeholder="비워두면 데이터셋 명칭에서 자동 생성"></label>
-      <label>기준 논문 arXiv ID <input id="dsRef" placeholder="비워두면 URL/제목으로 자동 탐색"><small>이 논문을 인용한 논문을 후보로 수집</small></label>
+    <details class="opt"><summary data-i18n="advanced"></summary><div class="grid">
+      <label><span data-i18n="keywords"></span> <input id="dsKeywords" data-i18n-ph="kwPh"></label>
+      <label><span data-i18n="refId"></span> <input id="dsRef" data-i18n-ph="refPh"><small data-i18n="refHint"></small></label>
     </div></details>
-    <h3>Major Company <span id="compCount"></span></h3>
-    <div class="row"><button id="selAll" class="ghost">전체 선택</button><button id="selNone" class="ghost">전체 해제</button></div>
+    <h3><span data-i18n="majorCompany"></span> <span id="compCount"></span></h3>
+    <div class="row"><button id="selAll" class="ghost" data-i18n="selAll"></button><button id="selNone" class="ghost" data-i18n="selNone"></button></div>
     <div id="companies" class="chips"></div>
     <form id="compForm" class="row">
-      <input id="cName" placeholder="회사명" required>
-      <input id="cAliases" placeholder="별칭(쉼표 구분, 예: Microsoft, Microsoft Research)" size="40">
-      <button type="submit" id="cSave">추가</button><button type="button" id="cCancel" class="ghost" hidden>취소</button>
+      <input id="cName" data-i18n-ph="cNamePh" required>
+      <input id="cAliases" data-i18n-ph="cAliasPh" size="40">
+      <button type="submit" id="cSave" data-i18n="add"></button><button type="button" id="cCancel" class="ghost" data-i18n="cancel" hidden></button>
     </form>
-    <small>회사 목록은 <code>data/major-company-list.json</code> 에 저장됩니다. 칩의 ✎ 수정, ✕ 삭제.</small>
-    <div class="row"><button id="go" class="primary">검색 실행</button><span id="status"></span></div>
+    <small data-i18n-html="compNote"></small>
+    <div class="row"><button id="go" class="primary" data-i18n="go"></button><span id="status"></span></div>
     <div id="bar" hidden><div></div></div><pre id="log" hidden></pre>
   </section>
 
   <section class="card" id="resultCard" hidden>
-    <div class="row between"><h2>검색 결과 <span id="resCount"></span></h2>
-      <div class="row"><label class="inline"><input type="checkbox" id="onlyOfficial"> 학회/저널만 (arXiv 제외)</label>
-      <button id="csv" class="ghost">CSV 저장</button></div></div>
+    <div class="row between"><h2><span data-i18n="results"></span> <span id="resCount"></span></h2>
+      <div class="row"><label class="inline"><input type="checkbox" id="onlyOfficial"> <span data-i18n="onlyOfficial"></span></label>
+      <button id="csv" class="ghost" data-i18n="csv"></button></div></div>
     <p id="meta" class="sub"></p>
-    <div class="row between toolbar"><div class="row"><input id="q" type="search" placeholder="검색: 논문명, 기업, 학회/저널, 문구…" size="36"><button id="qClear" class="ghost">지우기</button></div>
-      <label class="inline">페이지당 <select id="pageSize"><option>10</option><option selected>20</option><option>30</option><option>50</option><option>70</option><option>100</option><option>200</option></select> 개</label></div>
+    <div class="row between toolbar"><div class="row"><input id="q" type="search" data-i18n-ph="searchPh" size="36"><button id="qClear" class="ghost" data-i18n="clear"></button></div>
+      <label class="inline"><span data-i18n="perPageA"></span>&nbsp;<select id="pageSize"><option>10</option><option selected>20</option><option>30</option><option>50</option><option>70</option><option>100</option><option>200</option></select>&nbsp;<span data-i18n="perPageB"></span></label></div>
     <div class="scroll"><table><thead><tr>
-      <th>No.</th><th>컨퍼런스/저널 (년도)</th><th>논문명 (년도)</th><th>출판기업</th><th>다운로드 링크</th><th>데이터셋</th><th>활용 명시</th><th></th>
+      <th data-i18n="thNo"></th><th data-i18n="thVenue"></th><th data-i18n="thPaper"></th><th data-i18n="thCompany"></th><th data-i18n="thLink"></th><th data-i18n="thDataset"></th><th data-i18n="thUsage"></th><th></th>
     </tr></thead><tbody id="rows"></tbody></table></div>
     <nav id="pager" class="pager"></nav>
   </section>
 
   <section class="card notice">
-    <h2>예외 활용 조건 안내</h2>
+    <h2 data-i18n="noticeTitle"></h2>
     <ul>
-      <li><b>명확한 활용 명시</b>: 논문에 해당 데이터셋이 Train/Test 등으로 활용되었음이 명시되어야 함</li>
-      <li><b>소명 자료 제출</b>: 논문명·링크를 Request For Exception 에 입력 (각 행의 "소명자료 복사" 사용)</li>
-      <li>arXiv 는 공식 학술대회가 아닙니다. 학술대회 또는 저널에 게재된 논문을 제출하세요.</li>
+      <li data-i18n-html="notice1"></li>
+      <li data-i18n-html="notice2"></li>
+      <li data-i18n="notice3"></li>
     </ul>
   </section>
 </main>
+<script src="i18n.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

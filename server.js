@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { L } from './lib/i18n.js';
 import { loadCompanies, saveCompanies } from './lib/companies.js';
 import { runSearch, DEFAULT_DATASET } from './lib/search.js';
 
@@ -40,7 +41,7 @@ async function api(req, res, url) {
   if (m) {
     const name = decodeURIComponent(m[1]);
     const list = await loadCompanies();
-    if (!list.some((c) => c.name === name)) return send(res, 404, { error: '회사를 찾을 수 없습니다.' });
+    if (!list.some((c) => c.name === name)) return send(res, 404, { error: L('회사를 찾을 수 없습니다.', 'Company not found.') });
     if (req.method === 'DELETE') return send(res, 200, await saveCompanies(list.filter((c) => c.name !== name)));
     if (req.method === 'PUT') { // 수정
       const upd = await readBody(req);
@@ -50,19 +51,19 @@ async function api(req, res, url) {
   if (req.method === 'POST' && p === '/api/search') {
     const b = await readBody(req);
     const fromYear = Number(b.fromYear);
-    if (!Number.isInteger(fromYear) || fromYear < 2000 || fromYear > new Date().getFullYear()) return send(res, 400, { error: '올바른 시작 연도를 입력하세요.' });
+    if (!Number.isInteger(fromYear) || fromYear < 2000 || fromYear > new Date().getFullYear()) return send(res, 400, { error: L('올바른 시작 연도를 입력하세요.', 'Please enter a valid start year.') });
     const all = await loadCompanies();
     const selected = Array.isArray(b.companies) ? all.filter((c) => b.companies.includes(c.name)) : all;
-    if (!selected.length) return send(res, 400, { error: '검색할 회사를 1개 이상 선택하세요.' });
+    if (!selected.length) return send(res, 400, { error: L('검색할 회사를 1개 이상 선택하세요.', 'Select at least one company to search.') });
     const d = b.dataset || {};
     const ds = { name: String(d.name || '').trim(), url: String(d.url || '').trim(), refArxiv: String(d.refArxiv || '').trim(), keywords: d.keywords || '' };
-    if (!ds.name || !ds.url) return send(res, 400, { error: '데이터셋 명칭과 URL 은 필수 입력입니다.' });
+    if (!ds.name || !ds.url) return send(res, 400, { error: L('데이터셋 명칭과 URL 은 필수 입력입니다.', 'Dataset name and URL are required.') });
     const id = randomUUID();
     const job = { status: 'running', logs: [], percent: 0, result: null, error: null };
     jobs.set(id, job);
     runSearch({ fromYear, companies: selected, dataset: ds }, (m) => job.logs.push(m), (p) => { job.percent = p; })
       .then((r) => { job.result = r; job.status = 'done'; })
-      .catch((e) => { job.error = e.message; job.status = 'error'; });
+      .catch((e) => { job.error = e.i18n || e.message; job.status = 'error'; });
     return send(res, 202, { jobId: id });
   }
   const j = p.match(/^\/api\/jobs\/([\w-]+)$/);
@@ -84,7 +85,7 @@ const server = http.createServer(async (req, res) => {
     res.end(data);
   } catch (e) {
     if (e.code === 'ENOENT') return send(res, 404, { error: 'not found' });
-    send(res, 400, { error: e.message });
+    send(res, 400, { error: e.i18n || e.message });
   }
 });
 

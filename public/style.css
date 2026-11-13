@@ -28,3 +28,7 @@ td.no{color:var(--mut);white-space:nowrap}mark{background:#fde68a;color:#000;pad
 input.required{background:#e3edff;border-color:#2456d8;color:#0b2a6f}input.required:focus{outline:2px solid #2456d8}
 @media (prefers-color-scheme:dark){input.required{background:#1c3166;border-color:#6b93ff;color:#e6efff}}
 details.opt{margin:12px 0;border:1px dashed var(--bd);border-radius:8px;padding:8px 12px}details.opt summary{cursor:pointer;color:var(--mut);font-size:13px}
+header{position:relative}.langsw{position:absolute;top:16px;right:16px;display:flex;border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.langsw button{border:0;border-radius:0;padding:5px 12px;background:var(--card)}.langsw button[aria-pressed=true]{background:var(--ac);color:#fff}
+header h1{padding-right:170px}@media (max-width:600px){header h1{padding-right:0;padding-top:34px}}
+.req{align-self:flex-start}

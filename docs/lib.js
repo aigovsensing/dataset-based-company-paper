@@ -1,14 +1,20 @@
 // 브라우저 전용 로직 (서버 없이 OpenAlex 를 직접 호출). GitHub Pages(docs/) 용.
 export { classifyVenue } from './venue.js';
 
+// 화면에 보이는 메시지는 {ko, en} 쌍으로 만들어 브라우저가 현재 언어로 고른다.
+export const L = (ko, en) => ({ ko, en });
+export class I18nError extends Error {
+  constructor(ko, en, extra = {}) { super(en ?? ko); this.i18n = { ko, en: en ?? ko }; Object.assign(this, extra); }
+}
+
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export function normalize(list) {
   const seen = new Set();
   return list.map((c) => {
     const name = String(c?.name ?? '').trim();
-    if (!name) throw new Error('회사 이름이 비어 있습니다.');
-    if (seen.has(name.toLowerCase())) throw new Error(`중복된 회사: ${name}`);
+    if (!name) throw new I18nError('회사 이름이 비어 있습니다.', 'Company name is empty.');
+    if (seen.has(name.toLowerCase())) throw new I18nError(`중복된 회사: ${name}`, `Duplicate company: ${name}`);
     seen.add(name.toLowerCase());
     return { name, aliases: [...new Set([name, ...(c.aliases || [])].map((a) => String(a).trim()).filter(Boolean))] };
   });
@@ -27,11 +33,11 @@ async function getJson(url, tries = 3) {
     const r = await fetch(url);
     if (r.ok) return r.json();
     const body = await r.text();
-    if (r.status === 429 && /budget/i.test(body)) throw new Error('OpenAlex 무료 한도가 소진되었습니다. 무료 API 키를 입력하세요 (https://openalex.org).');
+    if (r.status === 429 && /budget/i.test(body)) throw new I18nError('OpenAlex 무료 한도가 소진되었습니다. 무료 API 키를 입력하세요 (https://openalex.org).', 'The free OpenAlex quota is exhausted. Enter a free API key (https://openalex.org).', { budget: true });
     if (r.status < 500 && r.status !== 429) throw new Error(`OpenAlex HTTP ${r.status}`);
     await new Promise((s) => setTimeout(s, 1500 * 2 ** i));
   }
-  throw new Error('OpenAlex 요청 실패');
+  throw new I18nError('OpenAlex 요청 실패', 'OpenAlex request failed');
 }
 
 
@@ -61,13 +67,13 @@ export async function resolveReference(input, q, log) {
   const name = input.name.trim();
   const keywords = deriveKeywords(name);
   let refArxiv = (input.refArxiv || '').trim() || arxivIdFrom(input.url) || KNOWN.find((k) => k.match.test(input.url))?.refArxiv || (await readmeArxiv(input.url));
-  if (refArxiv) { log(`기준 논문 arXiv:${refArxiv}`); return { name, keywords, refDoi: `10.48550/arXiv.${refArxiv}`, refArxiv, refTitle: name }; }
+  if (refArxiv) { log(L(`기준 논문 arXiv:${refArxiv}`, `Reference paper arXiv:${refArxiv}`)); return { name, keywords, refDoi: `10.48550/arXiv.${refArxiv}`, refArxiv, refTitle: name }; }
   for (const query of new Set([name, ...name.split(/[()]/).map((x) => x.trim()).filter((x) => x.length >= 4)])) {
     const r = await getJson(q('/works', { search: query, 'per-page': 5, select: 'id,title,doi,cited_by_count' }));
     const hit = (r.results || []).filter((w) => w.title && keywords.some((k) => w.title.toLowerCase().includes(k.toLowerCase()))).sort((a, b) => b.cited_by_count - a.cited_by_count)[0];
-    if (hit) { log(`기준 논문 자동 탐색(제목 검색): ${hit.title}`); return { name, keywords, refOaId: hit.id.split('/').pop(), refTitle: hit.title, refArxiv: arxivIdFrom(hit.doi || '') }; }
+    if (hit) { log(L(`기준 논문 자동 탐색(제목 검색): ${hit.title}`, `Reference paper auto-detected (title search): ${hit.title}`)); return { name, keywords, refOaId: hit.id.split('/').pop(), refTitle: hit.title, refArxiv: arxivIdFrom(hit.doi || '') }; }
   }
-  throw new Error('기준 논문을 자동으로 찾지 못했습니다. 고급 옵션의 "기준 논문 arXiv ID"를 입력해 주세요.');
+  throw new I18nError('기준 논문을 자동으로 찾지 못했습니다. 고급 옵션의 "기준 논문 arXiv ID"를 입력해 주세요.', 'Could not find the reference paper automatically. Please enter the "Reference paper arXiv ID" in Advanced options.');
 }
 
 export async function search({ fromYear, companies, dataset, apiKey, log, progress }) {
@@ -82,10 +88,10 @@ export async function search({ fromYear, companies, dataset, apiKey, log, progre
   if (ds.refOaId) ref = { id: ds.refOaId, title: ds.refTitle };
   else {
     try { ref = await getJson(q(`/works/doi:${ds.refDoi}`, { select: 'id,title' })); }
-    catch (e) { if (/한도/.test(e.message)) throw e; ref = (await getJson(q('/works', { search: ds.refTitle, 'per-page': 1, select: 'id,title' }))).results?.[0]; }
+    catch (e) { if (e.budget) throw e; ref = (await getJson(q('/works', { search: ds.refTitle, 'per-page': 1, select: 'id,title' }))).results?.[0]; }
   }
   const refId = ref.id.split('/').pop();
-  log(`기준 논문: ${ref.title}`);
+  log(L(`기준 논문: ${ref.title}`, `Reference paper: ${ref.title}`));
   dataset = ds;
 
   const matchers = buildMatchers(companies);
@@ -115,7 +121,7 @@ export async function search({ fromYear, companies, dataset, apiKey, log, progre
         dataset: dataset.name,
       });
     }
-    log(`인용 논문 ${scanned} / ${total} 확인, Major Company ${found.length}건`);
+    log(L(`인용 논문 ${scanned} / ${total} 확인, Major Company ${found.length}건`, `Checked ${scanned} / ${total} citing papers, ${found.length} from Major Companies`));
     progress(total ? scanned / total : 1);
     if (!r.results?.length || scanned >= total) break;
   }
