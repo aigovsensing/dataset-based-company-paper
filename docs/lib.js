@@ -113,10 +113,12 @@ export async function search({ fromYear, companies, dataset, apiKey, log, progre
       const pub = locs.find((l) => l.source && l.source.type !== 'repository');
       const doi = (w.doi || '').replace(/^https?:\/\/doi\.org\//, '');
       const arxivId = arxivIdFrom(axLoc?.landing_page_url) || arxivIdFrom(doi);
+      const nonArxiv = (u) => u && !/arxiv\.org/i.test(u);
+      const publishedPdf = (nonArxiv(pub?.pdf_url) ? pub.pdf_url : null) || locs.map((l) => l.pdf_url).find(nonArxiv) || null;
       const landing = pub?.landing_page_url || axLoc?.landing_page_url || (doi ? `https://doi.org/${doi}` : w.id);
       found.push({
         title: w.title, year: w.publication_year, date: w.publication_date, companies: cs, doi, arxivId,
-        url: arxivId ? `https://arxiv.org/abs/${arxivId}` : landing, publishedUrl: landing,
+        url: arxivId ? `https://arxiv.org/abs/${arxivId}` : landing, publishedUrl: landing, publishedPdf,
         venue: pub ? { name: pub.source.display_name, type: pub.source.type } : { name: 'arXiv', type: 'repository' },
         dataset: dataset.name,
       });

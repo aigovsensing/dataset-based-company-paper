@@ -131,7 +131,7 @@ function renderRows() {
     return `<tr><td class="no">${all.length - start - i}</td><td>${esc(venueLabel(r))}${r.venueInfo.official ? '' : `<br><span class="badge">${esc(t('notOfficial'))}</span>`}
       ${r.venueInfo.official && r.venueInfo.abbr !== r.venueInfo.name ? `<br><small>${esc(r.venueInfo.name)}</small>` : ''}</td>
       <td>${esc(r.title)} (${esc(r.year)})</td><td>${esc(r.companies.join(', '))}</td>
-      <td><a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.url)}">${esc(linkLabel(r.url))}</a>${pdfUrl(r) ? ` · <a href="${esc(pdfUrl(r))}" target="_blank" rel="noopener" title="${esc(pdfUrl(r))}">PDF</a>` : ''}${r.publishedUrl && r.publishedUrl !== r.url ? `<br><a href="${esc(r.publishedUrl)}" target="_blank" rel="noopener" title="${esc(r.publishedUrl)}">${esc(t('publishedLink'))} (${esc(linkLabel(r.publishedUrl))})</a>` : ''}</td>
+      <td><a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.url)}">${esc(linkLabel(r.url))}</a>${mainPdf(r) ? ` · <a href="${esc(mainPdf(r))}" target="_blank" rel="noopener" title="${esc(mainPdf(r))}">PDF</a>` : ''}${r.publishedUrl && r.publishedUrl !== r.url ? `<br><a href="${esc(r.publishedUrl)}" target="_blank" rel="noopener" title="${esc(r.publishedUrl)}">${esc(t('publishedLink'))} (${esc(linkLabel(r.publishedUrl))})</a>${r.publishedPdf ? ` · <a href="${esc(r.publishedPdf)}" target="_blank" rel="noopener" title="${esc(r.publishedPdf)}">PDF</a>` : ''}` : ''}</td>
       <td>${esc(r.dataset)}</td><td>${use}</td><td><button data-copy="${results.indexOf(r)}">${esc(t('copy'))}</button></td></tr>`;
   }).join('') || `<tr><td colspan="8">${esc(t('none'))}</td></tr>`;
 }
@@ -142,6 +142,8 @@ const pdfUrl = (r) => {
   const id = r.arxivId || (String(r.url).match(/arxiv\.org\/abs\/([\w.\/-]+)/i) || [])[1];
   return id ? `https://arxiv.org/pdf/${id}` : null;
 };
+// 메인 줄 PDF: arXiv PDF, 없으면(출판본만 있는 논문) 출판본 PDF
+const mainPdf = (r) => pdfUrl(r) || (r.publishedUrl === r.url ? r.publishedPdf : null);
 function linkLabel(url = '') {
   const ax = url.match(/arxiv\.org\/(?:abs|pdf|html)\/([\w.\-\/]+?)(?:v\d+)?(?:\.pdf)?$/i);
   if (ax) return `arXiv:${ax[1]}`;
