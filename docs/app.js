@@ -83,11 +83,16 @@ function rows() {
   renderPager(pages);
   $('rows').innerHTML = list.map((r, i) => `<tr><td class="no">${all.length - start - i}</td><td>${esc(venueLabel(r))}${r.venueInfo.official ? (r.venueInfo.abbr !== r.venueInfo.name ? `<br><small>${esc(r.venueInfo.name)}</small>` : '') : `<br><span class="badge">${esc(t('notOfficial'))}</span>`}</td>
   <td>${esc(r.title)} (${esc(r.year)})</td><td>${esc(r.companies.join(', '))}</td>
-  <td><a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.url)}">${esc(linkLabel(r.url))}</a>${r.publishedUrl !== r.url ? `<br><a href="${esc(r.publishedUrl)}" target="_blank" rel="noopener" title="${esc(r.publishedUrl)}">${esc(t('publishedLink'))} (${esc(linkLabel(r.publishedUrl))})</a>` : ''}</td>
+  <td><a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.url)}">${esc(linkLabel(r.url))}</a>${pdfUrl(r) ? ` · <a href="${esc(pdfUrl(r))}" target="_blank" rel="noopener" title="${esc(pdfUrl(r))}">PDF</a>` : ''}${r.publishedUrl !== r.url ? `<br><a href="${esc(r.publishedUrl)}" target="_blank" rel="noopener" title="${esc(r.publishedUrl)}">${esc(t('publishedLink'))} (${esc(linkLabel(r.publishedUrl))})</a>` : ''}</td>
   <td>${esc(r.dataset)}</td><td><span class="badge">${esc(t('usageDocs'))}</span></td><td><button data-copy="${results.indexOf(r)}">${esc(t('copy'))}</button></td></tr>`).join('') || `<tr><td colspan="8">${esc(t('none'))}</td></tr>`;
 }
 
 // 표에는 짧은 이름만 보여주고(링크·복사 텍스트는 전체 URL 유지), 전체 주소는 마우스를 올리면 title 로 표시
+// arXiv 논문이면 PDF 바로 받기 링크를 만든다 (arXiv 가 아닌 논문은 null)
+const pdfUrl = (r) => {
+  const id = r.arxivId || (String(r.url).match(/arxiv\.org\/abs\/([\w.\/-]+)/i) || [])[1];
+  return id ? `https://arxiv.org/pdf/${id}` : null;
+};
 function linkLabel(url = '') {
   const ax = url.match(/arxiv\.org\/(?:abs|pdf|html)\/([\w.\-\/]+?)(?:v\d+)?(?:\.pdf)?$/i);
   if (ax) return `arXiv:${ax[1]}`;
