@@ -131,11 +131,19 @@ function renderRows() {
     return `<tr><td class="no">${all.length - start - i}</td><td>${esc(venueLabel(r))}${r.venueInfo.official ? '' : `<br><span class="badge">${esc(t('notOfficial'))}</span>`}
       ${r.venueInfo.official && r.venueInfo.abbr !== r.venueInfo.name ? `<br><small>${esc(r.venueInfo.name)}</small>` : ''}</td>
       <td>${esc(r.title)} (${esc(r.year)})</td><td>${esc(r.companies.join(', '))}</td>
-      <td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a>${r.publishedUrl && r.publishedUrl !== r.url ? `<br><a href="${esc(r.publishedUrl)}" target="_blank" rel="noopener">${esc(t('publishedLink'))}</a>` : ''}</td>
+      <td><a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.url)}">${esc(linkLabel(r.url))}</a>${r.publishedUrl && r.publishedUrl !== r.url ? `<br><a href="${esc(r.publishedUrl)}" target="_blank" rel="noopener" title="${esc(r.publishedUrl)}">${esc(t('publishedLink'))} (${esc(linkLabel(r.publishedUrl))})</a>` : ''}</td>
       <td>${esc(r.dataset)}</td><td>${use}</td><td><button data-copy="${results.indexOf(r)}">${esc(t('copy'))}</button></td></tr>`;
   }).join('') || `<tr><td colspan="8">${esc(t('none'))}</td></tr>`;
 }
 
+// 표에는 짧은 이름만 보여주고(링크·복사 텍스트는 전체 URL 유지), 전체 주소는 마우스를 올리면 title 로 표시
+function linkLabel(url = '') {
+  const ax = url.match(/arxiv\.org\/(?:abs|pdf|html)\/([\w.\-\/]+?)(?:v\d+)?(?:\.pdf)?$/i);
+  if (ax) return `arXiv:${ax[1]}`;
+  const doi = url.match(/doi\.org\/(.+)$/i);
+  if (doi) return `DOI:${doi[1].length > 28 ? doi[1].slice(0, 27) + '…' : doi[1]}`;
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+}
 function filtered() {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
   return results.filter((r) => {
